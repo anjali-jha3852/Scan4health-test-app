@@ -2,23 +2,24 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-const API_BASE = "https://client-ylky.onrender.com/api"; // Live backend URL
+const API_BASE = "https://client-ylky.onrender.com/api/tests"; // Live backend URL
 
 export default function UserPage() {
   const [tests, setTests] = useState([]);
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true); // show loading while fetching
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Fetch all tests on page load
   const fetchTests = async () => {
+    setLoading(true);
+    setError("");
     try {
-      const res = await axios.get(`${API_BASE}/tests`);
+      const res = await axios.get(API_BASE);
       setTests(res.data);
-      setLoading(false);
     } catch (err) {
       console.error(err);
       setError("Failed to fetch tests. Please try again later.");
+    } finally {
       setLoading(false);
     }
   };
@@ -27,19 +28,16 @@ export default function UserPage() {
     fetchTests();
   }, []);
 
-  // Filter tests based on search input
   const filteredTests = tests.filter((t) =>
-    t.name.toLowerCase().includes(search.toLowerCase())
+    t.name.toLowerCase().includes(search.trim().toLowerCase())
   );
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-5xl mx-auto">
-      {/* Header */}
       <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-center text-gray-800">
         SCAN4HEALTH PRICE TEST APP
       </h1>
 
-      {/* Search Bar */}
       <div className="mb-6">
         <input
           type="text"
@@ -50,11 +48,9 @@ export default function UserPage() {
         />
       </div>
 
-      {/* Loading/Error */}
       {loading && <p className="text-center text-gray-600">Loading tests...</p>}
       {error && <p className="text-center text-red-600">{error}</p>}
 
-      {/* Tests Grid */}
       {!loading && !error && (
         filteredTests.length === 0 ? (
           <p className="text-center text-gray-600">No tests found.</p>

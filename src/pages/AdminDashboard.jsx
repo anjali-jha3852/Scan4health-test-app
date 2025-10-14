@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 
-const API_BASE = "https://client-ylky.onrender.com/api"; // Live backend URL
+const API_BASE = "https://client-ylky.onrender.com/api";
 
 export default function AdminDashboard() {
   const [tests, setTests] = useState([]);
@@ -10,32 +10,42 @@ export default function AdminDashboard() {
   const [domesticPrice, setDomesticPrice] = useState("");
   const [internationalPrice, setInternationalPrice] = useState("");
   const [precautions, setPrecautions] = useState("");
-  const [file, setFile] = useState(null);
   const [uploadMessage, setUploadMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
 
+  const fileInputRef = useRef(null); // To reset file input
   const token = localStorage.getItem("token");
 
-  // Fetch all tests
+  // -------------------- Auth check & fetch --------------------
+  useEffect(() => {
+    if (!token) {
+      alert("Please login first!");
+      window.location.href = "/admin/login";
+    } else {
+      fetchTests();
+    }
+  }, []);
+
   const fetchTests = async () => {
+    setFetching(true);
     try {
-      const res = await axios.get(`${API_BASE}/tests`);
+      const res = await axios.get(`${API_BASE}/admin/tests`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setTests(res.data);
     } catch (err) {
       console.error(err);
+      handleAuthError(err);
+    } finally {
+      setFetching(false);
     }
   };
 
-  useEffect(() => {
-    fetchTests();
-  }, []);
-
   // -------------------- Bulk Upload --------------------
-  const handleFileChange = (e) => setFile(e.target.files[0]);
-
-  const handleBulkUpload = async () => {
+  const handleBulkUpload = async (file) => {
     if (!file) return alert("Please select an Excel file first!");
-    if (!token) return alert("Please login as admin first!");
+    if (!token) return alert("Please login first!");
 
     const formData = new FormData();
     formData.append("file", file);
@@ -50,11 +60,13 @@ export default function AdminDashboard() {
         },
       });
       setUploadMessage(res.data.message);
-      setFile(null);
-      fetchTests(); // refresh after upload
+      resetForm();
+      fetchTests();
+      if (fileInputRef.current) fileInputRef.current.value = ""; // reset input
     } catch (err) {
       console.error(err);
       setUploadMessage(err.response?.data?.message || "Error uploading file");
+      handleAuthError(err);
     } finally {
       setLoading(false);
     }
@@ -62,7 +74,10 @@ export default function AdminDashboard() {
 
   // -------------------- Add / Update Test --------------------
   const saveTest = async () => {
-    if (!token) return alert("Please login as admin first!");
+    if (!name || !domesticPrice || !internationalPrice) {
+      return alert("Please fill all required fields!");
+    }
+
     try {
       const payload = {
         name,
@@ -85,6 +100,7 @@ export default function AdminDashboard() {
       fetchTests();
     } catch (err) {
       console.error(err.response?.data || err.message);
+      handleAuthError(err);
     }
   };
 
@@ -98,7 +114,9 @@ export default function AdminDashboard() {
   };
 
   const deleteTest = async (id) => {
-    if (!token) return alert("Please login as admin first!");
+    if (!token) return alert("Please login first!");
+    if (!confirm("Are you sure you want to delete this test?")) return;
+
     try {
       await axios.delete(`${API_BASE}/admin/tests/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -106,15 +124,25 @@ export default function AdminDashboard() {
       fetchTests();
     } catch (err) {
       console.error(err.response?.data || err.message);
+      handleAuthError(err);
     }
   };
 
+  // -------------------- Helper functions --------------------
   const resetForm = () => {
     setEditTestId(null);
     setName("");
     setDomesticPrice("");
     setInternationalPrice("");
     setPrecautions("");
+  };
+
+  const handleAuthError = (err) => {
+    if (err.response?.status === 401) {
+      alert("Session expired. Please login again.");
+      localStorage.removeItem("token");
+      window.location.href = "/admin/login";
+    }
   };
 
   return (
@@ -125,30 +153,20 @@ export default function AdminDashboard() {
 
       {/* Bulk Upload */}
       <div className="mb-8 border rounded-lg bg-gray-50 p-4 sm:p-6 shadow-sm">
-        <h2 className="text-lg sm:text-xl font-semibold mb-3">
-          📤 Bulk Upload Tests
-        </h2>
+        <h2 className="text-lg sm:text-xl font-semibold mb-3">📤 Bulk Upload Tests</h2>
         <div className="flex flex-col sm:flex-row gap-3">
           <input
             type="file"
+            ref={fileInputRef}
             accept=".xlsx, .xls"
-            onChange={handleFileChange}
+            onChange={(e) => handleBulkUpload(e.target.files[0])}
             className="border p-2 rounded w-full"
           />
-          <button
-            onClick={handleBulkUpload}
-            disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full sm:w-auto"
-          >
-            {loading ? "Uploading..." : "Upload"}
-          </button>
         </div>
         {uploadMessage && (
           <p
             className={`mt-2 font-semibold text-sm ${
-              uploadMessage.toLowerCase().includes("success")
-                ? "text-green-600"
-                : "text-red-600"
+              uploadMessage.toLowerCase().includes("success") ? "text-green-600" : "text-red-600"
             }`}
           >
             {uploadMessage}
@@ -199,11 +217,11 @@ export default function AdminDashboard() {
       </div>
 
       {/* Test List */}
-      <h2 className="text-xl sm:text-2xl font-semibold mb-3">
-        🧪 Existing Tests
-      </h2>
+      <h2 className="text-xl sm:text-2xl font-semibold mb-3">🧪 Existing Tests</h2>
       <div className="flex flex-col gap-3 overflow-y-auto max-h-[50vh]">
-        {tests.length === 0 ? (
+        {fetching ? (
+          <p className="text-gray-500 text-center">Loading tests...</p>
+        ) : tests.length === 0 ? (
           <p className="text-gray-500 text-center">No tests found.</p>
         ) : (
           tests.map((t) => (

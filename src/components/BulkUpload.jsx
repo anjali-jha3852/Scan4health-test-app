@@ -3,13 +3,14 @@ import axios from "axios";
 
 const API_BASE = "https://client-ylky.onrender.com/api"; // Live backend URL
 
-export default function BulkUpload() {
+export default function BulkUpload({ onSuccess }) {
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
+    setMessage(""); // clear previous messages when selecting a new file
   };
 
   const handleUpload = async () => {
@@ -21,6 +22,7 @@ export default function BulkUpload() {
     const token = localStorage.getItem("token"); // admin token
     if (!token) {
       alert("Please login as admin first!");
+      window.location.href = "/admin/login";
       return;
     }
 
@@ -30,6 +32,7 @@ export default function BulkUpload() {
     try {
       setLoading(true);
       setMessage("");
+
       const res = await axios.post(`${API_BASE}/admin/tests/bulk`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -39,8 +42,22 @@ export default function BulkUpload() {
 
       setMessage(res.data.message);
       setFile(null);
+
+      // Reset file input manually
+      document.getElementById("bulkFileInput").value = "";
+
+      // Optional callback to refresh test list
+      if (onSuccess) onSuccess();
     } catch (error) {
       console.error(error);
+
+      if (error.response?.status === 401) {
+        alert("Session expired. Please login again.");
+        localStorage.removeItem("token");
+        window.location.href = "/admin/login";
+        return;
+      }
+
       setMessage(error.response?.data?.message || "Error uploading file");
     } finally {
       setLoading(false);
@@ -52,6 +69,7 @@ export default function BulkUpload() {
       <h2 className="text-xl font-bold text-gray-800">📤 Bulk Upload Tests</h2>
       <input
         type="file"
+        id="bulkFileInput"
         accept=".xlsx, .xls"
         onChange={handleFileChange}
         className="border p-2 rounded w-full"
