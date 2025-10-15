@@ -1,7 +1,8 @@
 // src/pages/AdminDashboard.jsx
 import { useState, useEffect } from "react";
 import api, { ADMIN_TESTS } from "../api";
-import BulkUpload from "./BulkUpload"; 
+import BulkUpload from "../components/BulkUpload.jsx";
+
 
 export default function AdminDashboard() {
   const [tests, setTests] = useState([]);
