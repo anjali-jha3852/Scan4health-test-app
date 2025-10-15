@@ -1,6 +1,4 @@
 
-// src/pages/BulkUpload.jsx
-// src/pages/BulkUpload.jsx
 import React, { useState } from "react";
 import api, { ADMIN_TESTS_BULK } from "../api";
 
@@ -9,16 +7,20 @@ export default function BulkUpload() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Handle file selection
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
-    setMessage(""); // clear previous message
+    setMessage("");
   };
 
-  // Upload Excel file
   const handleUpload = async () => {
     if (!file) {
       setMessage("Please select an Excel file first!");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setMessage("You must login as admin to upload.");
       return;
     }
 
@@ -29,13 +31,16 @@ export default function BulkUpload() {
       setLoading(true);
       setMessage("");
 
-      // POST file to backend
-      const res = await api.post(ADMIN_TESTS_BULK, formData);
+      const res = await api.post(ADMIN_TESTS_BULK, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`, // ensure token is sent
+        },
+      });
 
       setMessage(res.data.message || "Upload successful!");
       setFile(null);
     } catch (err) {
-      console.error(err);
+      console.error("Upload error:", err);
       setMessage(err.response?.data?.message || "Error uploading file");
     } finally {
       setLoading(false);
