@@ -1,5 +1,6 @@
 
 // src/pages/BulkUpload.jsx
+// src/pages/BulkUpload.jsx
 import React, { useState } from "react";
 import api, { ADMIN_TESTS_BULK } from "../api";
 
@@ -8,17 +9,16 @@ export default function BulkUpload() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleFileChange = (e) => setFile(e.target.files[0]);
+  // Handle file selection
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0]);
+    setMessage(""); // clear previous message
+  };
 
+  // Upload Excel file
   const handleUpload = async () => {
     if (!file) {
-      alert("Please select an Excel file first!");
-      return;
-    }
-
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("Please login as admin first!");
+      setMessage("Please select an Excel file first!");
       return;
     }
 
@@ -29,17 +29,14 @@ export default function BulkUpload() {
       setLoading(true);
       setMessage("");
 
-      const res = await api.post(ADMIN_TESTS_BULK, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data", // token already added by api.js interceptor
-        },
-      });
+      // POST file to backend
+      const res = await api.post(ADMIN_TESTS_BULK, formData);
 
-      setMessage(res.data.message);
+      setMessage(res.data.message || "Upload successful!");
       setFile(null);
-    } catch (error) {
-      console.error(error);
-      setMessage(error.response?.data?.message || "Error uploading file");
+    } catch (err) {
+      console.error(err);
+      setMessage(err.response?.data?.message || "Error uploading file");
     } finally {
       setLoading(false);
     }
@@ -48,12 +45,14 @@ export default function BulkUpload() {
   return (
     <div className="p-6 max-w-md mx-auto bg-white rounded-xl shadow-md space-y-4">
       <h2 className="text-xl font-bold text-gray-800">📤 Bulk Upload Tests</h2>
+
       <input
         type="file"
         accept=".xlsx, .xls"
         onChange={handleFileChange}
         className="border p-2 rounded w-full"
       />
+
       <button
         onClick={handleUpload}
         disabled={loading}
@@ -61,10 +60,11 @@ export default function BulkUpload() {
       >
         {loading ? "Uploading..." : "Upload File"}
       </button>
+
       {message && (
         <p
           className={`text-center font-semibold ${
-            message.toLowerCase().includes("successfully")
+            message.toLowerCase().includes("success")
               ? "text-green-600"
               : "text-red-600"
           }`}
@@ -75,4 +75,3 @@ export default function BulkUpload() {
     </div>
   );
 }
-

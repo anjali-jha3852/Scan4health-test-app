@@ -1,6 +1,7 @@
 // src/pages/AdminDashboard.jsx
 import { useState, useEffect } from "react";
 import api, { ADMIN_TESTS } from "../api";
+import BulkUpload from "./BulkUpload"; 
 
 export default function AdminDashboard() {
   const [tests, setTests] = useState([]);
@@ -65,6 +66,11 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   };
+
+  
+<div className="mb-6">
+  <BulkUpload />
+</div>
 
   // -------------------- Edit Test --------------------
   const editTest = (t) => {
