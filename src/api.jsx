@@ -10,10 +10,8 @@ const API_BASE =
 // Axios instance
 const api = axios.create({
   baseURL: API_BASE,
-  headers: {
-    "Content-Type": "application/json",
-  },
 });
+
 
 // Request interceptor to attach token
 api.interceptors.request.use(
