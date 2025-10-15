@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import axios from "axios";
-
-const API_BASE = "https://client-ylky.onrender.com/api";
+import api from "../api"; // your centralized Axios instance
 
 export default function AdminDashboard() {
   const [tests, setTests] = useState([]);
@@ -15,25 +13,22 @@ export default function AdminDashboard() {
   const [fetching, setFetching] = useState(false);
 
   const fileInputRef = useRef(null);
-  const token = localStorage.getItem("token");
 
   // -------------------- Auth check & fetch --------------------
   useEffect(() => {
+    const token = localStorage.getItem("token");
     if (!token) {
       alert("Please login first!");
       window.location.href = "/admin/login";
       return;
     }
     fetchTests();
-  }, [token]);
+  }, []);
 
   const fetchTests = async () => {
-    if (!token) return;
     setFetching(true);
     try {
-      const res = await axios.get(`${API_BASE}/admin/tests`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get("/admin/tests"); // token handled automatically
       setTests(res.data);
     } catch (err) {
       console.error(err);
@@ -46,7 +41,6 @@ export default function AdminDashboard() {
   // -------------------- Bulk Upload --------------------
   const handleBulkUpload = async (file) => {
     if (!file) return alert("Please select an Excel file first!");
-    if (!token) return alert("Please login first!");
 
     const formData = new FormData();
     formData.append("file", file);
@@ -54,11 +48,8 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       setUploadMessage("");
-      const res = await axios.post(`${API_BASE}/admin/tests/bulk`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
+      const res = await api.post("/admin/tests/bulk", formData, {
+        headers: { "Content-Type": "multipart/form-data" }, // token automatically added
       });
       setUploadMessage(res.data.message);
       resetForm();
@@ -75,31 +66,25 @@ export default function AdminDashboard() {
 
   // -------------------- Add / Update Test --------------------
   const saveTest = async (e) => {
-    e.preventDefault(); // Prevent form reload
+    e.preventDefault();
     if (!name || !domesticPrice || !internationalPrice) {
       return alert("Please fill all required fields!");
     }
-    if (!token) return alert("Please login first!");
+
+    const payload = {
+      name,
+      domesticPrice: Number(domesticPrice),
+      internationalPrice: Number(internationalPrice),
+      precautions,
+    };
 
     try {
       setLoading(true);
-      const payload = {
-        name,
-        domesticPrice: Number(domesticPrice),
-        internationalPrice: Number(internationalPrice),
-        precautions,
-      };
-
       if (editTestId) {
-        await axios.put(`${API_BASE}/admin/tests/${editTestId}`, payload, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await api.put(`/admin/tests/${editTestId}`, payload);
       } else {
-        await axios.post(`${API_BASE}/admin/tests`, payload, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await api.post("/admin/tests", payload);
       }
-
       resetForm();
       fetchTests();
     } catch (err) {
@@ -120,14 +105,10 @@ export default function AdminDashboard() {
   };
 
   const deleteTest = async (id) => {
-    if (!token) return alert("Please login first!");
     if (!confirm("Are you sure you want to delete this test?")) return;
-
     try {
       setLoading(true);
-      await axios.delete(`${API_BASE}/admin/tests/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.delete(`/admin/tests/${id}`);
       fetchTests();
     } catch (err) {
       console.error(err.response?.data || err.message);
@@ -162,7 +143,9 @@ export default function AdminDashboard() {
 
       {/* Bulk Upload */}
       <div className="mb-8 border rounded-lg bg-gray-50 p-4 sm:p-6 shadow-sm">
-        <h2 className="text-lg sm:text-xl font-semibold mb-3">📤 Bulk Upload Tests</h2>
+        <h2 className="text-lg sm:text-xl font-semibold mb-3">
+          📤 Bulk Upload Tests
+        </h2>
         <input
           type="file"
           ref={fileInputRef}
@@ -173,7 +156,9 @@ export default function AdminDashboard() {
         {uploadMessage && (
           <p
             className={`mt-2 font-semibold text-sm ${
-              uploadMessage.toLowerCase().includes("success") ? "text-green-600" : "text-red-600"
+              uploadMessage.toLowerCase().includes("success")
+                ? "text-green-600"
+                : "text-red-600"
             }`}
           >
             {uploadMessage}
@@ -182,7 +167,10 @@ export default function AdminDashboard() {
       </div>
 
       {/* Add / Edit Test */}
-      <form className="mb-8 border rounded-lg p-4 sm:p-6 shadow-sm flex flex-col gap-3" onSubmit={saveTest}>
+      <form
+        className="mb-8 border rounded-lg p-4 sm:p-6 shadow-sm flex flex-col gap-3"
+        onSubmit={saveTest}
+      >
         <input
           placeholder="Name"
           className="border p-2 rounded"
@@ -268,3 +256,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+

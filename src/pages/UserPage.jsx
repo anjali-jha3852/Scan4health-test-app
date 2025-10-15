@@ -1,8 +1,5 @@
-
 import { useState, useEffect } from "react";
-import axios from "axios";
-
-const API_BASE = "https://client-ylky.onrender.com/api/tests"; // Live backend URL
+import api from "../api"; // your centralized Axios instance
 
 export default function UserPage() {
   const [tests, setTests] = useState([]);
@@ -10,15 +7,19 @@ export default function UserPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Fetch tests from backend
   const fetchTests = async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await axios.get(API_BASE);
+      const res = await api.get("/tests"); // token automatically included if needed
       setTests(res.data);
     } catch (err) {
-      console.error(err);
-      setError("Failed to fetch tests. Please try again later.");
+      console.error("Error fetching tests:", err);
+      setError(
+        err.response?.data?.message ||
+          "Failed to fetch tests. Please try again later."
+      );
     } finally {
       setLoading(false);
     }
@@ -28,6 +29,7 @@ export default function UserPage() {
     fetchTests();
   }, []);
 
+  // Filter tests by search input
   const filteredTests = tests.filter((t) =>
     t.name.toLowerCase().includes(search.trim().toLowerCase())
   );
@@ -71,7 +73,7 @@ export default function UserPage() {
                   <span className="font-medium">International Price:</span> ₹{t.internationalPrice}
                 </p>
                 <p className="text-sm sm:text-base text-gray-600 mt-1">
-                  <span className="font-medium">Precautions:</span> {t.precautions}
+                  <span className="font-medium">Precautions:</span> {t.precautions || "None"}
                 </p>
               </div>
             ))}

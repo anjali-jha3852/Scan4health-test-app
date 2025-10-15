@@ -1,12 +1,21 @@
 
 import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 export default function Navbar() {
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
+  const [token, setToken] = useState(localStorage.getItem("token"));
+
+  // Update token state if localStorage changes (logout/login)
+  useEffect(() => {
+    const handleStorageChange = () => setToken(localStorage.getItem("token"));
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    setToken(null); // immediately update UI
     navigate("/admin/login"); // redirect to login after logout
   };
 

@@ -1,9 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-
-// ✅ Use your deployed backend URL (Express server)
-const API_LOGIN = "https://client-ylky.onrender.com/api/admin/login";
+import api from "../api"; // import the axios instance
 
 export default function AdminLogin() {
   const [username, setUsername] = useState("");
@@ -13,28 +10,14 @@ export default function AdminLogin() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!username || !password) {
-      alert("Please enter both username and password");
-      return;
-    }
+    if (!username || !password) return alert("Enter username and password");
 
     try {
       setLoading(true);
+      const res = await api.post("/api/admin/login", { username, password });
 
-      // ✅ Ensure JSON headers are sent
-      const res = await axios.post(
-        API_LOGIN,
-        { username, password },
-        { headers: { "Content-Type": "application/json" } }
-      );
+      if (!res.data?.token) return alert("Login succeeded but token missing!");
 
-      // ✅ Check token
-      if (!res.data?.token) {
-        alert("Login succeeded but token missing!");
-        return;
-      }
-
-      // ✅ Save token & username
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("username", username);
 
@@ -42,14 +25,9 @@ export default function AdminLogin() {
       navigate("/admin/dashboard");
     } catch (err) {
       console.error("Login error:", err);
-
-      // ✅ Improved error message
       const message =
         err.response?.data?.message ||
-        (err.response?.status === 401
-          ? "Invalid credentials. Please try again!"
-          : "Login failed. Please check the server connection.");
-
+        "Login failed. Please check the backend connection";
       alert(message);
     } finally {
       setLoading(false);

@@ -1,7 +1,5 @@
 import React, { useState } from "react";
-import axios from "axios";
-
-const API_BASE = "https://client-ylky.onrender.com/api"; // Live backend URL
+import api from "../api"; // centralized Axios instance
 
 export default function BulkUpload({ onSuccess }) {
   const [file, setFile] = useState(null);
@@ -10,7 +8,7 @@ export default function BulkUpload({ onSuccess }) {
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
-    setMessage(""); // clear previous messages when selecting a new file
+    setMessage(""); // clear previous messages
   };
 
   const handleUpload = async () => {
@@ -19,8 +17,7 @@ export default function BulkUpload({ onSuccess }) {
       return;
     }
 
-    const token = localStorage.getItem("token"); // admin token
-    if (!token) {
+    if (!localStorage.getItem("token")) {
       alert("Please login as admin first!");
       window.location.href = "/admin/login";
       return;
@@ -33,18 +30,16 @@ export default function BulkUpload({ onSuccess }) {
       setLoading(true);
       setMessage("");
 
-      const res = await axios.post(`${API_BASE}/admin/tests/bulk`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`,
-        },
+      const res = await api.post("/admin/tests/bulk", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       setMessage(res.data.message);
       setFile(null);
 
       // Reset file input manually
-      document.getElementById("bulkFileInput").value = "";
+      const input = document.getElementById("bulkFileInput");
+      if (input) input.value = "";
 
       // Optional callback to refresh test list
       if (onSuccess) onSuccess();
