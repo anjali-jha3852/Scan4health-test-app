@@ -68,10 +68,7 @@ export default function AdminDashboard() {
     }
   };
 
-  
-<div className="mb-6">
-  <BulkUpload />
-</div>
+
 
   // -------------------- Edit Test --------------------
   const editTest = (t) => {
@@ -124,6 +121,12 @@ export default function AdminDashboard() {
           {message}
         </p>
       )}
+
+
+    {/* Bulk Upload */}
+    <div className="mb-6">
+      <BulkUpload />
+    </div>
 
       {/* Add / Edit Test */}
       <div className="mb-6 flex flex-col gap-2 border p-4 rounded">
