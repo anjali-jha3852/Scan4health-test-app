@@ -14,7 +14,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
 
-  const fileInputRef = useRef(null); // To reset file input
+  const fileInputRef = useRef(null);
   const token = localStorage.getItem("token");
 
   // -------------------- Auth check & fetch --------------------
@@ -22,12 +22,13 @@ export default function AdminDashboard() {
     if (!token) {
       alert("Please login first!");
       window.location.href = "/admin/login";
-    } else {
-      fetchTests();
+      return;
     }
-  }, []);
+    fetchTests();
+  }, [token]);
 
   const fetchTests = async () => {
+    if (!token) return;
     setFetching(true);
     try {
       const res = await axios.get(`${API_BASE}/admin/tests`, {
@@ -62,7 +63,7 @@ export default function AdminDashboard() {
       setUploadMessage(res.data.message);
       resetForm();
       fetchTests();
-      if (fileInputRef.current) fileInputRef.current.value = ""; // reset input
+      if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err) {
       console.error(err);
       setUploadMessage(err.response?.data?.message || "Error uploading file");
@@ -73,12 +74,15 @@ export default function AdminDashboard() {
   };
 
   // -------------------- Add / Update Test --------------------
-  const saveTest = async () => {
+  const saveTest = async (e) => {
+    e.preventDefault(); // Prevent form reload
     if (!name || !domesticPrice || !internationalPrice) {
       return alert("Please fill all required fields!");
     }
+    if (!token) return alert("Please login first!");
 
     try {
+      setLoading(true);
       const payload = {
         name,
         domesticPrice: Number(domesticPrice),
@@ -101,6 +105,8 @@ export default function AdminDashboard() {
     } catch (err) {
       console.error(err.response?.data || err.message);
       handleAuthError(err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -118,6 +124,7 @@ export default function AdminDashboard() {
     if (!confirm("Are you sure you want to delete this test?")) return;
 
     try {
+      setLoading(true);
       await axios.delete(`${API_BASE}/admin/tests/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -125,6 +132,8 @@ export default function AdminDashboard() {
     } catch (err) {
       console.error(err.response?.data || err.message);
       handleAuthError(err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -154,15 +163,13 @@ export default function AdminDashboard() {
       {/* Bulk Upload */}
       <div className="mb-8 border rounded-lg bg-gray-50 p-4 sm:p-6 shadow-sm">
         <h2 className="text-lg sm:text-xl font-semibold mb-3">📤 Bulk Upload Tests</h2>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="file"
-            ref={fileInputRef}
-            accept=".xlsx, .xls"
-            onChange={(e) => handleBulkUpload(e.target.files[0])}
-            className="border p-2 rounded w-full"
-          />
-        </div>
+        <input
+          type="file"
+          ref={fileInputRef}
+          accept=".xlsx, .xls"
+          onChange={(e) => handleBulkUpload(e.target.files[0])}
+          className="border p-2 rounded w-full"
+        />
         {uploadMessage && (
           <p
             className={`mt-2 font-semibold text-sm ${
@@ -175,7 +182,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Add / Edit Test */}
-      <div className="mb-8 border rounded-lg p-4 sm:p-6 shadow-sm flex flex-col gap-3">
+      <form className="mb-8 border rounded-lg p-4 sm:p-6 shadow-sm flex flex-col gap-3" onSubmit={saveTest}>
         <input
           placeholder="Name"
           className="border p-2 rounded"
@@ -202,19 +209,21 @@ export default function AdminDashboard() {
         />
         <div className="flex flex-col sm:flex-row gap-3 mt-2">
           <button
+            type="submit"
             className="bg-blue-500 text-white px-4 py-2 rounded w-full sm:w-auto"
-            onClick={saveTest}
+            disabled={loading}
           >
             {editTestId ? "Update Test" : "Add Test"}
           </button>
           <button
+            type="button"
             className="bg-gray-500 text-white px-4 py-2 rounded w-full sm:w-auto"
             onClick={resetForm}
           >
             Reset
           </button>
         </div>
-      </div>
+      </form>
 
       {/* Test List */}
       <h2 className="text-xl sm:text-2xl font-semibold mb-3">🧪 Existing Tests</h2>
@@ -238,12 +247,14 @@ export default function AdminDashboard() {
               </div>
               <div className="flex gap-2 w-full sm:w-auto">
                 <button
+                  type="button"
                   className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded w-full sm:w-auto"
                   onClick={() => editTest(t)}
                 >
                   Edit
                 </button>
                 <button
+                  type="button"
                   className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded w-full sm:w-auto"
                   onClick={() => deleteTest(t._id)}
                 >

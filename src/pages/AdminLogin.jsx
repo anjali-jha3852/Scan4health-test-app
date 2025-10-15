@@ -2,32 +2,57 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const API_BASE = "https://client-ylky.onrender.com/api/admin/login";
+// ✅ Use your deployed backend URL (Express server)
+const API_LOGIN = "https://client-ylky.onrender.com/api/admin/login";
 
 export default function AdminLogin() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
-
     if (!username || !password) {
-      return alert("Please enter both username and password");
+      alert("Please enter both username and password");
+      return;
     }
 
     try {
-      const res = await axios.post(API_BASE, { username, password });
+      setLoading(true);
 
-      // Save token in localStorage
+      // ✅ Ensure JSON headers are sent
+      const res = await axios.post(
+        API_LOGIN,
+        { username, password },
+        { headers: { "Content-Type": "application/json" } }
+      );
+
+      // ✅ Check token
+      if (!res.data?.token) {
+        alert("Login succeeded but token missing!");
+        return;
+      }
+
+      // ✅ Save token & username
       localStorage.setItem("token", res.data.token);
+      localStorage.setItem("username", username);
 
-      // Navigate to admin dashboard
+      alert("Login successful 🎉");
       navigate("/admin/dashboard");
     } catch (err) {
-      const message = err.response?.data?.message || "Login failed. Try again!";
+      console.error("Login error:", err);
+
+      // ✅ Improved error message
+      const message =
+        err.response?.data?.message ||
+        (err.response?.status === 401
+          ? "Invalid credentials. Please try again!"
+          : "Login failed. Please check the server connection.");
+
       alert(message);
-      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -51,9 +76,12 @@ export default function AdminLogin() {
         />
         <button
           type="submit"
-          className="bg-green-500 text-white py-3 rounded hover:bg-green-600 transition"
+          className={`${
+            loading ? "bg-gray-400" : "bg-green-500 hover:bg-green-600"
+          } text-white py-3 rounded transition`}
+          disabled={loading}
         >
-          Login
+          {loading ? "Logging in..." : "Login"}
         </button>
       </form>
     </div>
