@@ -1,13 +1,18 @@
-// src/api.jsx
+// src/api.js
 import axios from "axios";
 
-// Create Axios instance with base URL
+// ✅ Base URL now is just /api (Vite proxy will forward to Render)
+const API_BASE = "/api";
+
+// -------------------- Axios instance --------------------
 const api = axios.create({
-  baseURL: "https://client-ylky.onrender.com/api", // Render backend base URL
-  headers: { "Content-Type": "application/json" },
+  baseURL: API_BASE,
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-// Add request interceptor to include token automatically
+// -------------------- Request interceptor --------------------
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
@@ -19,17 +24,30 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Optional: response interceptor to handle 401 globally
+// -------------------- Response interceptor --------------------
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid
       localStorage.removeItem("token");
-      window.location.href = "/admin/login";
+      window.location.href = "/admin/login"; // fixed path
     }
     return Promise.reject(error);
   }
 );
 
+// -------------------- Endpoints --------------------
+
+// Admin routes
+export const ADMIN_LOGIN = "/admin/login";
+export const ADMIN_REGISTER = "/admin/register";
+export const ADMIN_TESTS = "/admin/tests";
+export const ADMIN_TESTS_BULK = "/admin/tests/bulk";
+
+// User routes
+export const USER_TESTS = "/tests";
+
+// -------------------- Export --------------------
 export default api;
+
+

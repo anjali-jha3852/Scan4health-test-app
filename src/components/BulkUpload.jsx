@@ -1,15 +1,14 @@
-import React, { useState } from "react";
-import api from "../api"; // centralized Axios instance
 
-export default function BulkUpload({ onSuccess }) {
+// src/pages/BulkUpload.jsx
+import React, { useState } from "react";
+import api, { ADMIN_TESTS_BULK } from "../api";
+
+export default function BulkUpload() {
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-    setMessage(""); // clear previous messages
-  };
+  const handleFileChange = (e) => setFile(e.target.files[0]);
 
   const handleUpload = async () => {
     if (!file) {
@@ -17,9 +16,9 @@ export default function BulkUpload({ onSuccess }) {
       return;
     }
 
-    if (!localStorage.getItem("token")) {
+    const token = localStorage.getItem("token");
+    if (!token) {
       alert("Please login as admin first!");
-      window.location.href = "/admin/login";
       return;
     }
 
@@ -30,29 +29,16 @@ export default function BulkUpload({ onSuccess }) {
       setLoading(true);
       setMessage("");
 
-      const res = await api.post("/admin/tests/bulk", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      const res = await api.post(ADMIN_TESTS_BULK, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data", // token already added by api.js interceptor
+        },
       });
 
       setMessage(res.data.message);
       setFile(null);
-
-      // Reset file input manually
-      const input = document.getElementById("bulkFileInput");
-      if (input) input.value = "";
-
-      // Optional callback to refresh test list
-      if (onSuccess) onSuccess();
     } catch (error) {
       console.error(error);
-
-      if (error.response?.status === 401) {
-        alert("Session expired. Please login again.");
-        localStorage.removeItem("token");
-        window.location.href = "/admin/login";
-        return;
-      }
-
       setMessage(error.response?.data?.message || "Error uploading file");
     } finally {
       setLoading(false);
@@ -64,7 +50,6 @@ export default function BulkUpload({ onSuccess }) {
       <h2 className="text-xl font-bold text-gray-800">📤 Bulk Upload Tests</h2>
       <input
         type="file"
-        id="bulkFileInput"
         accept=".xlsx, .xls"
         onChange={handleFileChange}
         className="border p-2 rounded w-full"
@@ -79,7 +64,9 @@ export default function BulkUpload({ onSuccess }) {
       {message && (
         <p
           className={`text-center font-semibold ${
-            message.toLowerCase().includes("success") ? "text-green-600" : "text-red-600"
+            message.toLowerCase().includes("successfully")
+              ? "text-green-600"
+              : "text-red-600"
           }`}
         >
           {message}
@@ -88,3 +75,4 @@ export default function BulkUpload({ onSuccess }) {
     </div>
   );
 }
+

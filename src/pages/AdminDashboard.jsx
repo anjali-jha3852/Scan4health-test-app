@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from "react";
-import api from "../api"; // your centralized Axios instance
+// src/pages/AdminDashboard.jsx
+import { useState, useEffect } from "react";
+import api, { ADMIN_TESTS } from "../api";
 
 export default function AdminDashboard() {
   const [tests, setTests] = useState([]);
@@ -8,67 +9,32 @@ export default function AdminDashboard() {
   const [domesticPrice, setDomesticPrice] = useState("");
   const [internationalPrice, setInternationalPrice] = useState("");
   const [precautions, setPrecautions] = useState("");
-  const [uploadMessage, setUploadMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(false);
+  const [message, setMessage] = useState("");
 
-  const fileInputRef = useRef(null);
-
-  // -------------------- Auth check & fetch --------------------
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("Please login first!");
-      window.location.href = "/admin/login";
-      return;
-    }
-    fetchTests();
-  }, []);
-
+  // -------------------- Fetch Tests --------------------
   const fetchTests = async () => {
-    setFetching(true);
-    try {
-      const res = await api.get("/admin/tests"); // token handled automatically
-      setTests(res.data);
-    } catch (err) {
-      console.error(err);
-      handleAuthError(err);
-    } finally {
-      setFetching(false);
-    }
-  };
-
-  // -------------------- Bulk Upload --------------------
-  const handleBulkUpload = async (file) => {
-    if (!file) return alert("Please select an Excel file first!");
-
-    const formData = new FormData();
-    formData.append("file", file);
-
     try {
       setLoading(true);
-      setUploadMessage("");
-      const res = await api.post("/admin/tests/bulk", formData, {
-        headers: { "Content-Type": "multipart/form-data" }, // token automatically added
-      });
-      setUploadMessage(res.data.message);
-      resetForm();
-      fetchTests();
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      const res = await api.get(ADMIN_TESTS);
+      setTests(res.data);
     } catch (err) {
-      console.error(err);
-      setUploadMessage(err.response?.data?.message || "Error uploading file");
-      handleAuthError(err);
+      console.error("Error fetching tests:", err);
+      setMessage(err.response?.data?.message || "Error fetching tests");
     } finally {
       setLoading(false);
     }
   };
 
-  // -------------------- Add / Update Test --------------------
-  const saveTest = async (e) => {
-    e.preventDefault();
+  useEffect(() => {
+    fetchTests();
+  }, []);
+
+  // -------------------- Save Test (Add / Update) --------------------
+  const saveTest = async () => {
     if (!name || !domesticPrice || !internationalPrice) {
-      return alert("Please fill all required fields!");
+      alert("Please fill all required fields");
+      return;
     }
 
     const payload = {
@@ -80,180 +46,157 @@ export default function AdminDashboard() {
 
     try {
       setLoading(true);
+      setMessage("");
+
       if (editTestId) {
-        await api.put(`/admin/tests/${editTestId}`, payload);
+        await api.put(`${ADMIN_TESTS}/${editTestId}`, payload);
+        setMessage("Test updated successfully!");
       } else {
-        await api.post("/admin/tests", payload);
+        await api.post(ADMIN_TESTS, payload);
+        setMessage("Test added successfully!");
       }
+
       resetForm();
       fetchTests();
     } catch (err) {
-      console.error(err.response?.data || err.message);
-      handleAuthError(err);
+      console.error("Error saving test:", err);
+      setMessage(err.response?.data?.message || "Error saving test");
     } finally {
       setLoading(false);
     }
   };
 
-  // -------------------- Edit & Delete --------------------
-  const editTest = (test) => {
-    setEditTestId(test._id);
-    setName(test.name);
-    setDomesticPrice(test.domesticPrice);
-    setInternationalPrice(test.internationalPrice);
-    setPrecautions(test.precautions);
+  // -------------------- Edit Test --------------------
+  const editTest = (t) => {
+    setEditTestId(t._id);
+    setName(t.name);
+    setDomesticPrice(t.domesticPrice);
+    setInternationalPrice(t.internationalPrice);
+    setPrecautions(t.precautions);
+    setMessage("");
   };
 
+  // -------------------- Delete Test --------------------
   const deleteTest = async (id) => {
-    if (!confirm("Are you sure you want to delete this test?")) return;
+    if (!window.confirm("Are you sure you want to delete this test?")) return;
+
     try {
       setLoading(true);
-      await api.delete(`/admin/tests/${id}`);
+      await api.delete(`${ADMIN_TESTS}/${id}`);
+      setMessage("Test deleted successfully!");
       fetchTests();
     } catch (err) {
-      console.error(err.response?.data || err.message);
-      handleAuthError(err);
+      console.error("Error deleting test:", err);
+      setMessage(err.response?.data?.message || "Error deleting test");
     } finally {
       setLoading(false);
     }
   };
 
-  // -------------------- Helper functions --------------------
+  // -------------------- Reset Form --------------------
   const resetForm = () => {
     setEditTestId(null);
     setName("");
     setDomesticPrice("");
     setInternationalPrice("");
     setPrecautions("");
-  };
-
-  const handleAuthError = (err) => {
-    if (err.response?.status === 401) {
-      alert("Session expired. Please login again.");
-      localStorage.removeItem("token");
-      window.location.href = "/admin/login";
-    }
+    setMessage("");
   };
 
   return (
-    <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-5xl mx-auto">
-      <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-center text-gray-800">
-        🛠 Admin Dashboard
-      </h1>
+    <div className="p-8 max-w-3xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
 
-      {/* Bulk Upload */}
-      <div className="mb-8 border rounded-lg bg-gray-50 p-4 sm:p-6 shadow-sm">
-        <h2 className="text-lg sm:text-xl font-semibold mb-3">
-          📤 Bulk Upload Tests
-        </h2>
-        <input
-          type="file"
-          ref={fileInputRef}
-          accept=".xlsx, .xls"
-          onChange={(e) => handleBulkUpload(e.target.files[0])}
-          className="border p-2 rounded w-full"
-        />
-        {uploadMessage && (
-          <p
-            className={`mt-2 font-semibold text-sm ${
-              uploadMessage.toLowerCase().includes("success")
-                ? "text-green-600"
-                : "text-red-600"
-            }`}
-          >
-            {uploadMessage}
-          </p>
-        )}
-      </div>
+      {/* Message */}
+      {message && (
+        <p
+          className={`mb-4 font-semibold ${
+            message.toLowerCase().includes("success") ? "text-green-600" : "text-red-600"
+          }`}
+        >
+          {message}
+        </p>
+      )}
 
       {/* Add / Edit Test */}
-      <form
-        className="mb-8 border rounded-lg p-4 sm:p-6 shadow-sm flex flex-col gap-3"
-        onSubmit={saveTest}
-      >
+      <div className="mb-6 flex flex-col gap-2 border p-4 rounded">
         <input
           placeholder="Name"
-          className="border p-2 rounded"
-          value={name}
+          className="border p-2"
+          value={name || ""}
           onChange={(e) => setName(e.target.value)}
         />
         <input
           placeholder="Domestic Price"
-          className="border p-2 rounded"
-          value={domesticPrice}
+          className="border p-2"
+          type="number"
+          value={domesticPrice || ""}
           onChange={(e) => setDomesticPrice(e.target.value)}
         />
         <input
           placeholder="International Price"
-          className="border p-2 rounded"
-          value={internationalPrice}
+          className="border p-2"
+          type="number"
+          value={internationalPrice || ""}
           onChange={(e) => setInternationalPrice(e.target.value)}
         />
         <input
           placeholder="Precautions"
-          className="border p-2 rounded"
-          value={precautions}
+          className="border p-2"
+          value={precautions || ""}
           onChange={(e) => setPrecautions(e.target.value)}
         />
-        <div className="flex flex-col sm:flex-row gap-3 mt-2">
+        <div className="flex gap-2">
           <button
-            type="submit"
-            className="bg-blue-500 text-white px-4 py-2 rounded w-full sm:w-auto"
+            className="bg-blue-500 text-white px-4 py-2 rounded"
+            onClick={saveTest}
             disabled={loading}
           >
-            {editTestId ? "Update Test" : "Add Test"}
+            {loading ? "Saving..." : editTestId ? "Update Test" : "Add Test"}
           </button>
           <button
-            type="button"
-            className="bg-gray-500 text-white px-4 py-2 rounded w-full sm:w-auto"
+            className="bg-gray-500 text-white px-4 py-2 rounded"
             onClick={resetForm}
+            disabled={loading}
           >
             Reset
           </button>
         </div>
-      </form>
+      </div>
 
       {/* Test List */}
-      <h2 className="text-xl sm:text-2xl font-semibold mb-3">🧪 Existing Tests</h2>
-      <div className="flex flex-col gap-3 overflow-y-auto max-h-[50vh]">
-        {fetching ? (
-          <p className="text-gray-500 text-center">Loading tests...</p>
-        ) : tests.length === 0 ? (
-          <p className="text-gray-500 text-center">No tests found.</p>
-        ) : (
-          tests.map((t) => (
+      <h2 className="text-xl font-semibold mb-2">Existing Tests</h2>
+      {loading && tests.length === 0 ? (
+        <p>Loading tests...</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {tests.map((t) => (
             <div
               key={t._id}
-              className="border rounded-lg p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white shadow-sm"
+              className="border p-2 flex justify-between items-center"
             >
-              <div className="mb-2 sm:mb-0">
-                <strong className="block text-gray-800">{t.name}</strong>
-                <p className="text-sm text-gray-600">
-                  ₹{t.domesticPrice} | ₹{t.internationalPrice}
-                </p>
-                <p className="text-xs text-gray-500">{t.precautions}</p>
+              <div>
+                <strong>{t.name}</strong> | ₹{t.domesticPrice} | ₹
+                {t.internationalPrice} | {t.precautions}
               </div>
-              <div className="flex gap-2 w-full sm:w-auto">
+              <div className="flex gap-2">
                 <button
-                  type="button"
-                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded w-full sm:w-auto"
+                  className="bg-yellow-500 text-white px-2 py-1 rounded"
                   onClick={() => editTest(t)}
                 >
                   Edit
                 </button>
                 <button
-                  type="button"
-                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded w-full sm:w-auto"
+                  className="bg-red-500 text-white px-2 py-1 rounded"
                   onClick={() => deleteTest(t._id)}
                 >
                   Delete
                 </button>
               </div>
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
-
