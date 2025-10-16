@@ -28,7 +28,7 @@ export default function UserPage() {
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">All Tests</h1>
+      <h1 className="text-2xl font-bold mb-4">Scan4health Test</h1>
 
       <input
         type="text"
