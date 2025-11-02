@@ -1,6 +1,7 @@
 // src/pages/AdminDashboard.jsx
 import { useState, useEffect } from "react";
-import api, { ADMIN_TESTS } from "../api";
+import api, { ADMIN_TESTS, DELETE_ALL_TESTS } from "../api";
+
 import BulkUpload from "../components/BulkUpload.jsx";
 
 
@@ -107,6 +108,24 @@ export default function AdminDashboard() {
     setMessage("");
   };
 
+
+  // Delete all tests
+const deleteAllTests = async () => {
+  if (!window.confirm("⚠️ This will delete ALL tests. Continue?")) return;
+
+  try {
+    setLoading(true);
+    await api.delete(DELETE_ALL_TESTS);
+    setMessage("✅ All tests deleted successfully!");
+    fetchTests();
+  } catch (err) {
+    setMessage(err.response?.data?.message || "Error deleting all tests");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
   return (
     <div className="p-8 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
@@ -175,7 +194,18 @@ export default function AdminDashboard() {
       </div>
 
       {/* Test List */}
-      <h2 className="text-xl font-semibold mb-2">Existing Tests</h2>
+      <div className="flex justify-between items-center mb-2">
+  <h2 className="text-xl font-semibold">Existing Tests</h2>
+
+  <button
+    className="bg-red-600 text-white px-3 py-1 rounded"
+    onClick={deleteAllTests}
+    disabled={loading}
+  >
+    {loading ? "Deleting..." : "Delete All"}
+  </button>
+</div>
+
       {loading && tests.length === 0 ? (
         <p>Loading tests...</p>
       ) : (

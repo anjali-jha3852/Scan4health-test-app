@@ -43,5 +43,7 @@ export const ADMIN_REGISTER = "/admin/register";
 export const ADMIN_TESTS = "/admin/tests";
 export const ADMIN_TESTS_BULK = "/admin/tests/bulk";
 export const USER_TESTS = "/tests";
+export const SEARCH_TESTS = "/tests/search";
+export const DELETE_ALL_TESTS = "/admin/tests/all";
 
 export default api;
