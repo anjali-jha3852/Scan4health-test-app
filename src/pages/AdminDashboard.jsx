@@ -115,7 +115,11 @@ const deleteAllTests = async () => {
 
   try {
     setLoading(true);
-    await api.delete(DELETE_ALL_TESTS);
+  api.delete("/tests/all")
+
+
+  // ✅ force correct route
+
     setMessage("✅ All tests deleted successfully!");
     fetchTests();
   } catch (err) {

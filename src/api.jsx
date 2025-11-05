@@ -1,11 +1,15 @@
 // src/api.js
 import axios from "axios";
 
+
+
+
 // Use different base URL depending on environment
 const API_BASE =
   import.meta.env.PROD
     ? "https://client-ylky.onrender.com/api" // your live Render backend
-    : "/api"; // local dev (Vite proxy)
+    :  "http://localhost:5000/api";
+ // local dev (Vite proxy)
 
 // Axios instance
 const api = axios.create({
